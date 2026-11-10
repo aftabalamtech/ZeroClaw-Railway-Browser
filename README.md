@@ -1,41 +1,34 @@
 # ZeroClaw Railway Browser
 
-Railway deployment wrapper for ZeroClaw with the `agent-browser` CLI and a headless Chrome for Testing installation.
+Railway deployment wrapper for the upstream ZeroClaw Debian runtime with Node.js 24, `agent-browser`, and headless Chrome for Testing.
 
-## What this image contains
+## Included
 
-- Upstream ZeroClaw Debian runtime image (configurable with `ZEROCLAW_IMAGE`).
-- Node.js 24 and the `agent-browser` CLI.
-- Chrome for Testing and Linux browser dependencies installed during the Docker build.
-- Browser files in `/opt/agent-browser`, readable by the non-root ZeroClaw runtime user.
-- Browser automation enabled with the `agent_browser` backend.
-- Railway's injected `PORT` mapped to `ZEROCLAW_gateway__port`.
-- Persistent application data under `/zeroclaw-data`.
-
-This project extends the upstream runtime image; it does not fork or rebuild the ZeroClaw Rust application.
+- Upstream ZeroClaw Debian runtime image.
+- Node.js 24 and global `agent-browser` CLI.
+- Chrome for Testing and Linux dependencies installed at image-build time.
+- Browser cache stored under `/opt/agent-browser-home/.agent-browser/browsers`, outside the Railway volume mount.
+- ZeroClaw data stored separately under `/zeroclaw-data/data`.
+- Railway's injected `PORT` mapped to the ZeroClaw gateway port.
+- Non-root runtime user (UID/GID 65534).
 
 ## Deploy on Railway
 
-1. Connect this GitHub repository to a Railway service.
-2. Set the builder to Dockerfile (Railway detects `railway.json` automatically).
-3. Add a Railway Volume mounted at `/zeroclaw-data`.
-4. Set your provider credentials and model settings in Railway Variables.
-5. Generate a Railway public domain and deploy.
+1. Connect this repository as a Railway service using the Dockerfile builder.
+2. Add a Railway Volume mounted at `/zeroclaw-data`.
+3. Add your model provider credentials and model settings as Railway Variables.
+4. Generate a public domain and deploy. Railway supplies `PORT`; do not set it manually.
 
-Railway provides `PORT` automatically. Do not hard-code a different gateway port in Railway.
-
-### Example provider variables
-
-Use the provider/model identifier supported by your own ZeroClaw configuration:
+Example OpenRouter variables (use a model ID supported by your ZeroClaw version):
 
 ```env
 ZEROCLAW_providers__models__openrouter__default__api_key=YOUR_OPENROUTER_API_KEY
 ZEROCLAW_providers__models__openrouter__default__model=anthropic/claude-sonnet-4-20250514
 ```
 
-## Browser settings
+## Browser configuration
 
-These defaults are already present in the image; they can be overridden in Railway:
+The image enables these settings by default:
 
 ```env
 ZEROCLAW_browser__enabled=true
@@ -44,17 +37,15 @@ ZEROCLAW_browser__backend=agent_browser
 ZEROCLAW_browser__headed=false
 ```
 
-Restrict browsing to the domains your agent actually needs:
+Set a restricted domain allowlist for production:
 
 ```env
 ZEROCLAW_browser__allowed_domains=["github.com","google.com","docs.zeroclaw.com"]
 ```
 
-Avoid wildcard access for agents that can use authenticated browser sessions.
+## Browser smoke test
 
-## Browser CLI smoke test
-
-When you have shell access to a running container:
+In a shell inside the running container:
 
 ```bash
 agent-browser --version
@@ -64,32 +55,19 @@ agent-browser snapshot -i
 agent-browser close
 ```
 
-You can also ask the ZeroClaw agent to open `https://example.com` and report its title and visible text.
-
-## Local build
+## Local Docker build
 
 ```bash
 docker build -t zeroclaw-railway-browser:local .
 ```
 
-Local run:
+## Important
 
-```bash
-mkdir -p ./zeroclaw-data
+This is headless browser automation; it does not provide a VNC/noVNC graphical desktop. Do not expose a browser desktop publicly without authentication and network restrictions.
 
-docker run --rm \
-  -p 42617:42617 \
-  -e PORT=42617 \
-  -v "$PWD/zeroclaw-data:/zeroclaw-data" \
-  zeroclaw-railway-browser:local
-```
+## Upstream
 
-## Graphical browser / VNC
-
-This image runs the browser headlessly for agent automation. It does not expose a public VNC/noVNC desktop. A live interactive browser should be deployed separately behind authentication or a private network—not exposed as an unauthenticated Railway port.
-
-## Upstream references
-
-- [ZeroClaw repository](https://github.com/zeroclaw-labs/zeroclaw)
-- [ZeroClaw v0.8.7 browser documentation](https://docs.zeroclaw.com/v0.8.7/en/tools/browser.html)
-- [agent-browser](https://github.com/vercel-labs/agent-browser)
+- [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw)
+- [ZeroClaw browser docs v0.8.7](https://docs.zeroclaw.com/v0.8.7/en/tools/browser.html)
+- [agent-browser installation](https://agent-browser.dev/installation)
+- [agent-browser configuration](https://agent-browser.dev/configuration)
