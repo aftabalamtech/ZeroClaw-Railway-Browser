@@ -19,7 +19,11 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends ca-certificates curl gosu; \
     npm install --global agent-browser; \
     agent-browser install --with-deps; \
-    test -x "$(find /opt/agent-browser-home/.agent-browser/browsers -type f -name chrome -print -quit)"; \
+    CHROME_BIN="$(find /opt/agent-browser-home/.agent-browser/browsers -type f -name chrome -print -quit)"; \
+    test -n "$CHROME_BIN"; \
+    test -x "$CHROME_BIN"; \
+    printf '%s\n' "$CHROME_BIN" > /etc/agent-browser-chrome-path; \
+    chmod 644 /etc/agent-browser-chrome-path; \
     chmod -R a+rX /opt/agent-browser-home/.agent-browser; \
     agent-browser --version; \
     node --version; \
