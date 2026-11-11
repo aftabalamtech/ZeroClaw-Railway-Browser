@@ -1,13 +1,20 @@
 #!/bin/sh
 set -eu
 
-# Railway mounts a fresh volume at /zeroclaw-data. A Dockerfile chown cannot
-# change the mounted volume's ownership, so fix it at container startup.
+# Railway mounts a fresh volume at /zeroclaw-data. Repair volume ownership
+# before dropping privileges to the dedicated non-root ZeroClaw user.
 mkdir -p /zeroclaw-data/data /zeroclaw-data/.zeroclaw/data
 chown -R 65534:65534 /zeroclaw-data
 
-# Browser binaries are baked into the image, outside the mounted volume.
+# agent-browser's daemon socket must live in a writable runtime directory.
+# Keep it outside the persistent volume and browser cache.
 export HOME=/opt/agent-browser-home
+export XDG_RUNTIME_DIR=/tmp/zeroclaw-runtime
+export AGENT_BROWSER_SOCKET_DIR=/tmp/agent-browser-sockets
+mkdir -p "$XDG_RUNTIME_DIR" "$AGENT_BROWSER_SOCKET_DIR"
+chown -R 65534:65534 "$XDG_RUNTIME_DIR" "$AGENT_BROWSER_SOCKET_DIR"
+chmod 700 "$XDG_RUNTIME_DIR" "$AGENT_BROWSER_SOCKET_DIR"
+
 export ZEROCLAW_DATA_DIR="${ZEROCLAW_DATA_DIR:-/zeroclaw-data/data}"
 export ZEROCLAW_gateway__host="${ZEROCLAW_gateway__host:-0.0.0.0}"
 export ZEROCLAW_gateway__port="${PORT:-${ZEROCLAW_gateway__port:-42617}}"
