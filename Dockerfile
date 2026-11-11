@@ -13,14 +13,10 @@ COPY --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
-# agent-browser stores its Chrome-for-Testing download below
-# $HOME/.agent-browser/browsers (not PLAYWRIGHT_BROWSERS_PATH).
-# Use a dedicated path outside the Railway volume mount so the volume cannot
-# hide the browser binaries at runtime.
 ENV HOME=/opt/agent-browser-home
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ca-certificates curl; \
+    apt-get install -y --no-install-recommends ca-certificates curl gosu; \
     npm install --global agent-browser; \
     agent-browser install --with-deps; \
     test -x "$(find /opt/agent-browser-home/.agent-browser/browsers -type f -name chrome -print -quit)"; \
@@ -30,7 +26,8 @@ RUN set -eux; \
     npm --version; \
     rm -rf /var/lib/apt/lists/*
 
-ENV ZEROCLAW_DATA_DIR=/zeroclaw-data/data \
+ENV HOME=/opt/agent-browser-home \
+    ZEROCLAW_DATA_DIR=/zeroclaw-data/data \
     PLAYWRIGHT_BROWSERS_PATH=/opt/agent-browser-home/.agent-browser/browsers \
     ZEROCLAW_browser__enabled=true \
     ZEROCLAW_browser__automation_enabled=true \
@@ -42,11 +39,13 @@ ENV ZEROCLAW_DATA_DIR=/zeroclaw-data/data \
 
 COPY --chmod=755 railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
 
-RUN mkdir -p /zeroclaw-data/data /opt/agent-browser-home/.agent-browser \
+RUN mkdir -p /zeroclaw-data/data /zeroclaw-data/.zeroclaw/data \
     && chown -R 65534:65534 /zeroclaw-data /opt/agent-browser-home \
     && chmod -R a+rX /opt/agent-browser-home/.agent-browser
 
-USER 65534:65534
+# Start as root only long enough to repair ownership of the mounted Railway
+# volume, then drop privileges before starting ZeroClaw.
+USER root
 WORKDIR /zeroclaw-data
 
 EXPOSE 42617
