@@ -27,6 +27,8 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 ENV HOME=/opt/agent-browser-home \
+    XDG_RUNTIME_DIR=/tmp/zeroclaw-runtime \
+    AGENT_BROWSER_SOCKET_DIR=/tmp/agent-browser-sockets \
     ZEROCLAW_DATA_DIR=/zeroclaw-data/data \
     PLAYWRIGHT_BROWSERS_PATH=/opt/agent-browser-home/.agent-browser/browsers \
     ZEROCLAW_browser__enabled=true \
@@ -40,11 +42,13 @@ ENV HOME=/opt/agent-browser-home \
 COPY --chmod=755 railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
 
 RUN mkdir -p /zeroclaw-data/data /zeroclaw-data/.zeroclaw/data \
+    /opt/agent-browser-home/.agent-browser \
+    /tmp/zeroclaw-runtime /tmp/agent-browser-sockets \
     && chown -R 65534:65534 /zeroclaw-data /opt/agent-browser-home \
-    && chmod -R a+rX /opt/agent-browser-home/.agent-browser
+    /tmp/zeroclaw-runtime /tmp/agent-browser-sockets \
+    && chmod -R a+rX /opt/agent-browser-home/.agent-browser \
+    && chmod 700 /tmp/zeroclaw-runtime /tmp/agent-browser-sockets
 
-# Start as root only long enough to repair ownership of the mounted Railway
-# volume, then drop privileges before starting ZeroClaw.
 USER root
 WORKDIR /zeroclaw-data
 
