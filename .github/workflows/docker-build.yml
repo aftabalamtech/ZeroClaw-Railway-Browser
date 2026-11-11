@@ -25,5 +25,14 @@ jobs:
           load: true
           platforms: linux/amd64
           tags: zeroclaw-railway-browser:ci
+      - name: Verify browser runtime as non-root
+        run: |
+          docker run --rm --user 65534:65534 --entrypoint sh zeroclaw-railway-browser:ci -ec '
+            test -x "$(cat /etc/agent-browser-chrome-path)"
+            test -x "$(command -v agent-browser)"
+            test -w /tmp/agent-browser-sockets || mkdir -p /tmp/agent-browser-sockets
+            agent-browser --version
+            node --version
+          '
       - name: Inspect image
         run: docker image inspect zeroclaw-railway-browser:ci
